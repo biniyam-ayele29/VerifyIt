@@ -20,11 +20,35 @@ function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isVerified, setIsVerified] = useState(false);
+  const [verifiedPhone, setVerifiedPhone] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
+      if (currentUser) {
+        try {
+          const phoneVerifiedInStorage = localStorage.getItem(`${currentUser.uid}-phoneVerified`) === 'true';
+          const hasFirebasePhone = !!currentUser.phoneNumber;
+          
+          if (hasFirebasePhone || phoneVerifiedInStorage) {
+              setIsVerified(true);
+              const storedPhone = localStorage.getItem(`${currentUser.uid}-verifiedPhoneNumber`);
+              setVerifiedPhone(currentUser.phoneNumber || storedPhone);
+          } else {
+              setIsVerified(false);
+              setVerifiedPhone(null);
+          }
+        } catch (e) {
+            console.error("Could not access localStorage.", e);
+            setIsVerified(!!currentUser.phoneNumber);
+            setVerifiedPhone(currentUser.phoneNumber);
+        }
+      } else {
+        setIsVerified(false);
+        setVerifiedPhone(null);
+      }
       setLoading(false);
     });
     return () => unsubscribe();
@@ -53,6 +77,14 @@ export default function Home() {
 
   const handleSignOut = async () => {
     try {
+      if(user) {
+        try {
+            localStorage.removeItem(`${user.uid}-phoneVerified`);
+            localStorage.removeItem(`${user.uid}-verifiedPhoneNumber`);
+        } catch (e) {
+            console.error("Could not access localStorage.", e);
+        }
+      }
       await signOut(auth);
     } catch (error) {
       console.error("Error signing out", error);
@@ -83,8 +115,6 @@ export default function Home() {
       window.location.href = verificationUrl.toString();
     }
   };
-
-  const isVerified = !!user?.phoneNumber;
 
   const renderContent = () => {
     if (loading) {
@@ -120,7 +150,7 @@ export default function Home() {
                 {isVerified ? 'Phone Verified' : 'Phone Not Verified'}
               </p>
               <p className="text-xs text-muted-foreground">
-                {isVerified ? 'Your phone number has been successfully verified.' : 'Please complete phone verification.'}
+                {isVerified ? `Verified number: ${verifiedPhone}` : 'Please complete phone verification.'}
               </p>
             </div>
           </div>
