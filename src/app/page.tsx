@@ -35,13 +35,18 @@ export default function Home() {
     try {
       setLoading(true);
       await signInWithPopup(auth, provider);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error signing in with Google", error);
+      let description = "Failed to sign in with Google. Please try again.";
+      if (error.code === 'auth/unauthorized-domain') {
+        description = "This domain is not authorized. Go to Firebase Console > Authentication > Settings and add 'localhost' to Authorized domains."
+      }
       toast({
         title: "Authentication Error",
-        description: "Failed to sign in with Google. Please try again.",
+        description: description,
         variant: "destructive",
       });
+    } finally {
       setLoading(false);
     }
   };
@@ -60,8 +65,23 @@ export default function Home() {
   };
 
   const handleVerifyPhone = () => {
-    // This should be the URL of your third-party phone verification application
-    window.location.href = 'https://your-phone-verification-app.web.app';
+    if (user) {
+      const verificationUrl = new URL('https://your-phone-verification-app.web.app');
+      const clientId = process.env.NEXT_PUBLIC_CLIENT_ID;
+
+      if (!clientId) {
+        toast({
+            title: "Configuration Error",
+            description: "Client ID is missing. Please set NEXT_PUBLIC_CLIENT_ID in your .env.local file.",
+            variant: "destructive",
+        });
+        return;
+      }
+
+      verificationUrl.searchParams.set('client_id', clientId);
+      verificationUrl.searchParams.set('user_app_id', user.uid);
+      window.location.href = verificationUrl.toString();
+    }
   };
 
   const isVerified = !!user?.phoneNumber;
