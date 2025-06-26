@@ -66,7 +66,7 @@ export default function Home() {
 
   const handleVerifyPhone = () => {
     if (user) {
-      const verificationUrl = new URL('https://your-phone-verification-app.web.app');
+      const verificationUrl = new URL('https://televerify.example.com/');
       const clientId = process.env.NEXT_PUBLIC_CLIENT_ID;
 
       if (!clientId) {
